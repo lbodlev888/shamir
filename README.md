@@ -242,7 +242,10 @@ recoverer.set_shares(shares[:3])  # Use first 3 shares
 
 ## 👤 Author
 
-[Your Name and Details Here]
+Bodlev Laurentiu
+📍 Cahul, Republic of Moldova
+💡 Passionate about cryptography, networking, and distributed systems.
+🌐 GitHub: https://github.com/lbodlev888
 
 ## License
 
