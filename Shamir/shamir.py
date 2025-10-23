@@ -50,6 +50,10 @@ class Shamir:
             y = (y + coef * pow(x, i, self.__p)) % self.__p
         return (x, y)
 
+    def get_public(self) -> dict:
+        "Exports public data like prime, nr of shares and the threshold in dict/json format"
+        return {'p': self.__p, 'n': self.__n, 'k': self.__k}
+
     def export_public(self, filename: str) -> None:
         "exports public data in a json format. data like prime number, total number of shares and minimum number of shares to reconstruct the secret aka threshold. Required at reconstruction"
         data = {'p': self.__p, 'n': self.__n, 'k': self.__k}
@@ -65,11 +69,13 @@ class Shamir:
 
     def export_shares(self, template: str) -> None:
         "exports the all n shares following the template. Template example: share{}.txt. Function will use format to inject id in your template"
-        for i, point in enumerate(self.__shares):
-            share = ';'.join(str(coordinate) for coordinate in point)
-            share = b64e(share.encode())
-            with open(template.format(i+1), 'wb') as f:
+        for i, share in enumerate(self.__shares):
+            with open(template.format(i+1), 'w') as f:
                 f.write(share)
+
+    def get_shares(self) -> list:
+        "This function returns the shares as a list without exporting them"
+        return self.__shares
 
     def load_public(self, filename: str) -> None:
         "loads public json file, json exported with export_public method"
@@ -85,7 +91,9 @@ class Shamir:
         "IGNORE(internal only). This function is the one that generates all the shares and cummulates them in one array"
         for _ in range(1, self.__n+1):
             point = self.__generate_random_point()
-            self.__shares.append(point)
+            share = ';'.join(str(coordinate) for coordinate in point)
+            share = b64e(share.encode()).decode()
+            self.__shares.append(share)
 
 
 if __name__ == '__main__':
