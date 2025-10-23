@@ -52,11 +52,22 @@ class Shamir:
 
     def get_public(self) -> dict:
         "Exports public data like prime, nr of shares and the threshold in dict/json format"
-        return {'p': self.__p, 'n': self.__n, 'k': self.__k}
+        return {'p': self.__p, 'k': self.__k}
+
+    def set_public(self, public_data: dict) -> None:
+        "This method sets public data like the finite field(prime p) and threshold k. Alternativ to loading it from a json file using load_public method. Finite field should use key p and threshold key k"
+        if 'p' in public_data:
+            self.__p = public_data['p']
+        else:
+            raise ValueError('missing finite field')
+        if 'k' in public_data:
+            self.__k = public_data['k']
+        else:
+            raise ValueError('missing threshold')
 
     def export_public(self, filename: str) -> None:
         "exports public data in a json format. data like prime number, total number of shares and minimum number of shares to reconstruct the secret aka threshold. Required at reconstruction"
-        data = {'p': self.__p, 'n': self.__n, 'k': self.__k}
+        data = {'p': self.__p, 'k': self.__k}
         with open(filename, 'w') as f:
             json.dump(data, f)
 
@@ -64,8 +75,12 @@ class Shamir:
         "used at reconstruction. Pass the same template used at exporting_shares, also pass a list of indexes, the ones to inject when reconstructing and the ones you have. Even if you have more then threshold all will be loaded but used no more then threshold"
         for index in indexes:
             with open(template.format(index), 'r') as f:
-                share = tuple(int(x) for x in b64d(f.read().encode()).decode().split(';'))
-            self.__shares.append(share)
+                share = self.__raw_share_to_usable_data(f.read())
+                self.__shares.append(share)
+
+    def __raw_share_to_usable_data(self, source: str) -> tuple:
+        "INTERNAL USE. This function only share from base64 into tuple of x and y"
+        return tuple(int(coord) for coord in b64d(source.encode()).decode().split(';'))
 
     def export_shares(self, template: str) -> None:
         "exports the all n shares following the template. Template example: share{}.txt. Function will use format to inject id in your template"
@@ -76,6 +91,11 @@ class Shamir:
     def get_shares(self) -> list:
         "This function returns the shares as a list without exporting them"
         return self.__shares
+
+    def set_shares(self, shares: list) -> None:
+        for share in shares:
+            share = self.__raw_share_to_usable_data(share)
+            self.__shares.append(share)
 
     def load_public(self, filename: str) -> None:
         "loads public json file, json exported with export_public method"
@@ -95,13 +115,12 @@ class Shamir:
             share = b64e(share.encode()).decode()
             self.__shares.append(share)
 
-
 if __name__ == '__main__':
-    shamir = Shamir(secret=b'top secret data', n=10, k=4)
-    shamir.export_public('data.json')
-    shamir.export_shares(template='share{}.dat')
-
-    shamir = Shamir()
-    shamir.load_public('data.json')
-    shamir.load_shares(template='share{}.dat', indexes=[8, 5, 1, 10, 4])
-    print(shamir.recover())
+    shamir = Shamir(b'top secret data', n=10, k=9)
+    public = shamir.get_public()
+    shares = shamir.get_shares()
+    
+    shamir1 = Shamir()
+    shamir1.set_public(public)
+    shamir1.set_shares(shares) # not practical cause here all 10 shares are used when only 4 are needed
+    print(shamir1.recover())
