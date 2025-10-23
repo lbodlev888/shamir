@@ -89,7 +89,7 @@ class Shamir:
 
 
 if __name__ == '__main__':
-    shamir = Shamir(secret=b'Cat imi dai banii inapoi?', n=10, k=4)
+    shamir = Shamir(secret=b'top secret data', n=10, k=4)
     shamir.export_public('data.json')
     shamir.export_shares(template='share{}.dat')
 
