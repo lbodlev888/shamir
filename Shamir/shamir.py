@@ -4,7 +4,7 @@ from secrets import token_bytes
 from base64 import b64encode as b64e, b64decode as b64d
 
 class Shamir:
-    "simple Shamir's Secret Sharing implementation"
+    "Simple Shamir's Secret Sharing implementation with VSS using Feldman's Scheme"
     def __init__(self, secret: bytes | None = None, n: int | None = None, k: int | None = None) -> None:
         "inits a Shamir instance. secret is data to be shared, n - total number of shares, k - minimum number of shares to recover the secret"
         if k and n and k > n:
@@ -15,7 +15,7 @@ class Shamir:
             self.__secret = bytes_to_long(secret)
             self.__coefficients.append(self.__secret)
             print('Generating primes...')
-            self.__p, self.__q = self.__safePrime(self.__secret.bit_length()+10)
+            self.__p, self.__q = self.__safePrime(max(self.__secret.bit_length()+64, 1024))
             self.__n = n if n else 0
             self.__k = k if k else 0
             print('Generating shares...')
@@ -34,7 +34,7 @@ class Shamir:
     def __compute_generator(self) -> None:
         "Internal use only. generates generator g for commitments used in feldman's scheme when verifying share"
         while True:
-            h = bytes_to_long(token_bytes(20))
+            h = bytes_to_long(token_bytes(20)) % self.__q
             self.__g = pow(h, (self.__p-1)//self.__q, self.__p)
             if self.__g != 1:
                 return
@@ -63,14 +63,12 @@ class Shamir:
             rh *= pow(commit, pow(share[0], i, self.__q), self.__p)
             rh %= self.__p
 
-        if lh == rh:
-            return True
-        raise ValueError('Invalid share')
+        return lh == rh
 
     def __generate_coefs(self) -> None:
         "IGNORE(internal only). Generates coefficients for the polynomial function, before generating shares."
         for _ in range(self.__k-1):
-            temp_coef = bytes_to_long(token_bytes(20))
+            temp_coef = bytes_to_long(token_bytes(20)) % self.__q
             self.__coefficients.append(temp_coef)
 
     def recover(self) -> bytes:
@@ -89,7 +87,7 @@ class Shamir:
 
     def __generate_random_point(self) -> tuple:
         "IGNORE(internal only). This function is the one that generates plain share aka coordinate"
-        x = bytes_to_long(token_bytes(20))
+        x = bytes_to_long(token_bytes(20)) % self.__q
         y = 0
         for i, coef in enumerate(self.__coefficients):
             y = (y + coef * pow(x, i, self.__q)) % self.__q
@@ -161,6 +159,8 @@ if __name__ == '__main__':
     shamir.export_public('public.json')
     shares = shamir.get_shares()
     commitments = shamir.compute_commitments()
+    with open('commits.json', 'w') as f:
+        json.dump(commitments, f)
     
     shamir1 = Shamir()
     shamir1.load_public('public.json')
